@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Preview</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      font-size: 18px;
+      color: #333;
+      background: #fff;
+    }
+
+    .print-controls {
+      background: #f8f9fa;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid #dee2e6;
+      z-index: 1000;
+      justify-content: center;
+    }
+
+    .print-controls button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .print-button {
+      background-color: #4382D0;
+      color: white;
+    }
+
+    .print-button:hover {
+      background-color: #316eb9;
+    }
+
+    .close-button {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .close-button:hover {
+      background-color: #c82333;
+    }
+
+    .preview-content {
+      position: relative;
+      margin-top: 60px;
+      padding: 40px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    .invoice-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #333;
+      margin: 0;
+    }
+
+    .logo {
+      width: 100px;
+    }
+
+    .invoice-info {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 60px;
+      justify-content: space-between;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+    }
+
+    .invoice-details {
+      width: 20%;
+      padding: 20px 0;
+      border-right: 1px solid #eee;
+    }
+
+    .billing-details {
+      width: 40%;
+      padding: 20px 0;
+      border-right: 1px solid #eee;
+    }
+
+    .company-details {
+      width: 40%;
+      padding: 20px 0;
+    }
+
+    .invoice-number {
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 8px;
+      border-bottom: 2px solid #eee;
+    }
+
+    td {
+      padding: 12px 8px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .amount-column {
+      text-align: right;
+    }
+
+    .subtotal-section {
+      margin-left: auto;
+      width: 300px;
+    }
+
+    .subtotal-row td {
+      padding: 8px;
+      border: none;
+    }
+
+    .subtotal-row td:last-child {
+      text-align: right;
+    }
+
+    .amount-due {
+      font-weight: bold;
+      margin-top: 20px;
+      padding: 20px 0;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+    }
+
+    .footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      color: #333;
+      padding: 40px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .payment-info {
+      margin-top: 10px;
+      font-size: 14px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .company-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .quote-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .print-button img,
+    .close-button img {
+      filter: invert(1);
+    }
+
+    @media print {
+      .print-controls {
+        display: none;
+      }
+      .preview-content {
+        margin-top: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-controls">
+    <button class="print-button" onclick="window.print()">
+      <img src="/src/assets/printer.svg" alt="Print"> Print
+    </button>
+    <button class="close-button" onclick="window.close()">
+      <img src="/src/assets/close.svg" alt="Close"> Close
+    </button>
+  </div>
+  <div class="preview-content" id="previewContent">
+    <!-- Content will be injected here -->
+  </div>
+
+  <script>
+    function formatCurrency(amount) {
+      return '฿' + Number(amount).toFixed(2);
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'renderInvoice') {
+        console.log('Received data:', event.data.invoiceData);
+        const data = event.data.invoiceData;
+        document.getElementById('previewContent').innerHTML = `
+          <div class="invoice-header">
+            <h1 class="invoice-title">INVOICE</h1>
+            <img src="/src/assets/logo1.png" alt="VUECRM" class="logo">
+          </div>
+
+          <div class="invoice-info">
+            <div class="invoice-details">
+              <div class="invoice-number">
+                <strong>Order Number</strong><br>
+                ${data.orderNumber || 'N/A'}
+              </div>
+              <div class="invoice-date">
+                <strong>Date</strong><br>
+                ${formatDate(data.orderDate || '')}
+              </div>
+            </div>
+            <div class="billing-details">
+              <strong>Billed to</strong><br>
+              ${data.customerName || 'N/A'}<br>
+              ${data.customerAddress || 'N/A'}<br>
+              ${data.customerPhone || 'N/A'}
+            </div>
+            <div class="company-details">
+              <strong>From</strong><br>
+              VUECRM Co., Ltd.<br>
+              123 Business Park<br>
+              Bangkok, Thailand 10110<br>
+              TAX ID 0000000123456789
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th style="text-align: center">Qty</th>
+                <th style="text-align: right">Price</th>
+                <th style="text-align: right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  ${data.productName || 'N/A'}<br>
+                  <div class="description">${data.description || 'N/A'}</div>
+                </td>
+                <td style="text-align: center">${data.amount || '0'}</td>
+                <td class="amount-column">${formatCurrency(data.price || 0)}</td>
+                <td class="amount-column">${formatCurrency(data.total || 0)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="subtotal-section">
+            <table>
+              <tr class="subtotal-row">
+                <td>Subtotal</td>
+                <td>${formatCurrency(data.total || 0)}</td>
+              </tr>
+              <tr class="subtotal-row">
+                <td>Tax (0%)</td>
+                <td>${formatCurrency(0)}</td>
+              </tr>
+              <tr class="subtotal-row total-row">
+                <td>Total</td>
+                <td>${formatCurrency(data.total || 0)}</td>
+              </tr>
+              <tr class="subtotal-row amount-due">
+                <td>Amount due</td>
+                <td>${formatCurrency(data.total || 0)}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="footer">
+            <div><strong>Thank you for the business!</strong></div>
+            <div class="payment-info"><img class="quote-icon" src="/src/assets/quote.svg"> Please pay within 15 days of receiving this invoice.</div>
+            <div class="company-info">
+              <div>VUECRM.Co.,Ltd.</div>
+              <div>+66 0000 00000 | info@email.com</div>
+            </div>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html> 
