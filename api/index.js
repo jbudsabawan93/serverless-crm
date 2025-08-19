@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 let conn = null;
 
-// Order Schema + Model
+// Schemas
 const OrderSchema = new mongoose.Schema({
   order_id: String,
   order_number: String,
@@ -12,9 +12,6 @@ const OrderSchema = new mongoose.Schema({
   total: Number,
   order_date: Date
 });
-const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
-
-// Customer Schema + Model
 const CustomerSchema = new mongoose.Schema({
   customer_id: String,
   full_name: String,
@@ -23,9 +20,6 @@ const CustomerSchema = new mongoose.Schema({
   order_number: String,
   date: Date
 });
-const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
-
-// Product Schema + Model
 const ProductSchema = new mongoose.Schema({
   product_id: String,
   imge_url: String,
@@ -37,235 +31,143 @@ const ProductSchema = new mongoose.Schema({
   sku: String,
   createdAt: { type: Date, default: Date.now }
 });
+
+const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 
-// Lambda Handler
+const SPA_ORIGIN = process.env.SPA_ORIGIN || '*';
+
+const defaultHeaders = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': SPA_ORIGIN,
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+};
+
+const send = (statusCode, body) => ({
+  statusCode,
+  headers: defaultHeaders,
+  body: JSON.stringify(body)
+});
+
+const parseBody = (raw) => {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch (e) { return {}; }
+};
+
+const ensureConnected = async () => {
+  if (conn && mongoose.connection && mongoose.connection.readyState === 1) return;
+  if (process.env.MONGODB_URI == null) {
+    throw new Error('MONGODB_URI not set');
+  }
+  conn = await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+  console.log('✅ Connected to MongoDB');
+};
+
+const modelFor = (name) => {
+  switch ((name || '').toLowerCase()) {
+    case 'customers': return { model: Customer, idField: 'customer_id', required: ['customer_id','full_name'] };
+    case 'orders': return { model: Order, idField: 'order_id', required: ['order_id','order_number'] };
+    case 'products': return { model: Product, idField: 'product_id', required: ['product_id','product_name'] };
+    default: return null;
+  }
+};
+
 exports.handler = async (event) => {
   try {
-    if (conn === null) {
-      conn = await mongoose.connect(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-      });
-      console.log("✅ Connected to MongoDB");
+    // Support HTTP API and REST event shapes
+    const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
+    const rawPath = event.rawPath || event.path || '/';
+    // Normalize path under /api
+    const base = '/api';
+    let sub = rawPath.startsWith(base) ? rawPath.slice(base.length) : rawPath;
+    sub = sub.replace(/^\/+|\/+$/g, ''); // trim slashes
+    const segments = sub.split('/').filter(Boolean); // e.g. ['customers','123']
+
+    // CORS preflight
+    if (method === 'OPTIONS') return { statusCode: 204, headers: defaultHeaders, body: '' };
+
+    await ensureConnected();
+
+    // no resource: return simple health/info
+    if (!segments.length) {
+      return send(200, { status: 'ok', resources: ['customers','orders','products'] });
     }
 
-    // --- Customers CRUD ---
-    if (event.path && event.path.endsWith('/customers')) {
-      // DELETE
-      if (event.httpMethod === 'DELETE') {
-        const { customer_id } = JSON.parse(event.body || '{}');
-        if (!customer_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'customer_id is required' })
-          };
-        }
-        const result = await Customer.deleteOne({ customer_id });
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', deletedCount: result.deletedCount })
-        };
+    const resource = segments[0];
+    const resourceIdFromPath = segments[1]; // optional id in path
+    const descriptor = modelFor(resource);
+    if (!descriptor) return send(404, { error: 'unknown resource', resource });
+
+    const Model = descriptor.model;
+    const idField = descriptor.idField;
+
+    const body = parseBody(event.body);
+
+    // Allow id via path or body
+    const idValue = resourceIdFromPath || body[idField];
+
+    // CRUD operations
+    if (method === 'GET') {
+      if (idValue) {
+        const doc = await Model.findOne({ [idField]: idValue }).lean();
+        if (!doc) return send(404, { error: 'not found' });
+        return send(200, doc);
+      } else {
+        const docs = await Model.find().lean();
+        return send(200, docs);
       }
-      // PUT (update)
-      if (event.httpMethod === 'PUT') {
-        const { customer_id, full_name, address, telephone, order_number, date } = JSON.parse(event.body || '{}');
-        if (!customer_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'customer_id is required' })
-          };
-        }
-        const result = await Customer.updateOne(
-          { customer_id },
-          { full_name, address, telephone, order_number, date: date ? new Date(date) : undefined }
-        );
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', modifiedCount: result.modifiedCount })
-        };
-      }
-      // POST (create)
-      if (event.httpMethod === 'POST') {
-        const { customer_id, full_name, address, telephone, order_number, date } = JSON.parse(event.body || '{}');
-        if (!customer_id || !full_name) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'customer_id and full_name are required' })
-          };
-        }
-        const newCustomer = new Customer({
-          customer_id,
-          full_name,
-          address,
-          telephone,
-          order_number,
-          date: date ? new Date(date) : undefined
-        });
-        await newCustomer.save();
-        return {
-          statusCode: 201,
-          body: JSON.stringify({ status: 'success', customer: newCustomer })
-        };
-      }
-      // GET (all)
-      const customers = await Customer.find().lean();
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customers)
-      };
     }
 
-    // --- Orders CRUD ---
-    if (event.path && event.path.endsWith('/orders')) {
-      // DELETE
-      if (event.httpMethod === 'DELETE') {
-        const { order_id } = JSON.parse(event.body || '{}');
-        if (!order_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'order_id is required' })
-          };
-        }
-        const result = await Order.deleteOne({ order_id });
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', deletedCount: result.deletedCount })
-        };
-      }
-      // PUT (update)
-      if (event.httpMethod === 'PUT') {
-        const { order_id, order_number, product_name, price, amount, total, order_date } = JSON.parse(event.body || '{}');
-        if (!order_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'order_id is required' })
-          };
-        }
-        const result = await Order.updateOne(
-          { order_id },
-          { 
-            order_number, 
-            product_name, 
-            price, 
-            amount, 
-            total, 
-            order_date: order_date ? new Date(order_date) : undefined
-          }
-        );
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', modifiedCount: result.modifiedCount })
-        };
-      }
-      // POST (create)
-      if (event.httpMethod === 'POST') {
-        const { order_id, order_number, product_name, price, amount, total, order_date } = JSON.parse(event.body || '{}');
-        if (!order_id || !order_number) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'order_id and order_number are required' })
-          };
-        }
-        const newOrder = new Order({
-          order_id,
-          order_number,
-          product_name,
-          price,
-          amount,
-          total,
-          order_date: order_date ? new Date(order_date) : undefined
-        });
-        await newOrder.save();
-        return {
-          statusCode: 201,
-          body: JSON.stringify({ status: 'success', order: newOrder })
-        };
-      }
-      // GET (all)
-      const orders = await Order.find().lean();
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orders)
-      };
+    if (method === 'POST') {
+      // validate required fields
+      const missing = (descriptor.required || []).filter(f => !(body && body[f]));
+      if (missing.length) return send(400, { error: 'missing fields', missing });
+      // Transform dates if present
+      if (body.order_date) body.order_date = new Date(body.order_date);
+      if (body.date) body.date = new Date(body.date);
+      if (body.createdAt) body.createdAt = new Date(body.createdAt);
+
+      const instance = new Model(body);
+      await instance.save();
+      return send(201, { status: 'created', item: instance });
     }
 
-    // --- Products CRUD ---
-    if (event.path && event.path.endsWith('/products')) {
-      // DELETE
-      if (event.httpMethod === 'DELETE') {
-        const { product_id } = JSON.parse(event.body || '{}');
-        if (!product_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'product_id is required' })
-          };
-        }
-        const result = await Product.deleteOne({ product_id });
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', deletedCount: result.deletedCount })
-        };
-      }
-      // PUT (update)
-      if (event.httpMethod === 'PUT') {
-        const { product_id, imge_url, product_name, description, price, quantity, category, sku, createdAt } = JSON.parse(event.body || '{}');
-        if (!product_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'product_id is required' })
-          };
-        }
-        const result = await Product.updateOne(
-          { product_id },
-          { imge_url, product_name, description, price, quantity, category, sku, createdAt: createdAt ? new Date(createdAt) : undefined }
-        );
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ status: 'success', modifiedCount: result.modifiedCount })
-        };
-      }
-      // POST (create)
-      if (event.httpMethod === 'POST') {
-        const { product_id, imge_url, product_name, description, price, quantity, category, sku, createdAt } = JSON.parse(event.body || '{}');
-        if (!product_id || !product_name) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'product_id and product_name are required' })
-          };
-        }
-        const newProduct = new Product({
-          product_id,
-          imge_url,
-          product_name,
-          description,
-          price,
-          quantity,
-          category,
-          sku,
-          createdAt: createdAt ? new Date(createdAt) : undefined
-        });
-        await newProduct.save();
-        return {
-          statusCode: 201,
-          body: JSON.stringify({ status: 'success', product: newProduct })
-        };
-      }
-      // GET (all)
-      const products = await Product.find().lean();
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(products)
-      };
+    if (method === 'PUT' || method === 'PATCH') {
+      if (!idValue) return send(400, { error: `${idField} is required in path or body` });
+      // prepare update payload (exclude undefined)
+      const update = { ...body };
+      // convert possible date fields
+      if (update.order_date) update.order_date = new Date(update.order_date);
+      if (update.date) update.date = new Date(update.date);
+      if (update.createdAt) update.createdAt = new Date(update.createdAt);
+      // remove id field if present to avoid changing identifier
+      delete update[idField];
+
+      const res = await Model.updateOne({ [idField]: idValue }, update);
+      const modified = res.modifiedCount ?? res.nModified ?? 0;
+      return send(200, { status: 'updated', modifiedCount: modified });
     }
+
+    if (method === 'DELETE') {
+      if (!idValue) return send(400, { error: `${idField} is required in path or body` });
+      const res = await Model.deleteOne({ [idField]: idValue });
+      const deleted = res.deletedCount ?? res.n ?? 0;
+      return send(200, { status: 'deleted', deletedCount: deleted });
+    }
+
+    return send(405, { error: 'method not allowed' });
 
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error('❌ Error:', err);
     return {
       statusCode: 500,
+      headers: defaultHeaders,
       body: JSON.stringify({ error: err.message })
     };
   }

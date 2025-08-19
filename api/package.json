@@ -2,9 +2,11 @@
   "name": "api",
   "version": "1.0.0",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "lambda-v2.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "bestzip lambda-v2.zip * -o -x \"node_modules/*\" -x \".git/*\"",
+    "deploy": "npm run build"
   },
   "keywords": [],
   "author": "",
@@ -12,5 +14,11 @@
   "description": "",
   "dependencies": {
     "mongoose": "^8.16.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "bestzip": "^2.2.1"
   }
 }
