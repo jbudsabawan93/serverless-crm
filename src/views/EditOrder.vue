@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import DashboardLayout from '../components/DashboardLayout.vue'
 import SubmitButton from '../components/SubmitButton.vue'
-import { config } from '../config'
+import { apiFetch } from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,7 +40,7 @@ const fetchOrder = async () => {
     isLoading.value = true
     error.value = null
     
-    const response = await fetch(`${config.API_URL}/orders`)
+    const response = await apiFetch('/orders')
     if (!response.ok) throw new Error('Network response was not ok')
     const orders = await response.json()
     
@@ -69,11 +69,8 @@ const fetchOrder = async () => {
 
 const handleSubmit = async () => {
   try {
-    const response = await fetch(`${config.API_URL}/orders`, {
+    const response = await apiFetch('/orders', {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         order_id: order.value.orderId,
         order_number: order.value.orderNumber,
@@ -220,10 +217,10 @@ onMounted(() => {
 
 <style scoped>
 .edit-order {
-  padding: 40px;
+  padding: 28px 32px;
   background: white;
-  border-radius: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
   overflow: auto;
 }
 
@@ -238,22 +235,28 @@ onMounted(() => {
 }
 
 h1 {
-  margin: 2rem 0 4rem;
+  margin: 0 0 1.75rem;
   text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E2D40;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E2D40;
 }
 
 input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 10px 12px;
+  border: 1px solid #e4e8ee;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 0.9rem;
+  background: #f7f9fc;
 }
 
 .readonly-input {
@@ -270,8 +273,9 @@ input {
   text-align: center;
   padding: 40px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
+  font-size: 0.95rem;
 }
 
 .error-message {

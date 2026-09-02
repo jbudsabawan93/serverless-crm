@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import DashboardLayout from '../DashboardLayout.vue'
 import SubmitButton from '../SubmitButton.vue'
-import { config } from '../../config'
+import { apiFetch } from '../../api'
 import { RouterLink } from 'vue-router'
 
 interface CustomerData {
@@ -25,6 +25,37 @@ const customerData = ref<CustomerData>({
 
 const isSubmitting = ref(false)
 const submitStatus = ref('')
+const touched = ref({
+  fullName: false,
+  address: false,
+  phone: false,
+  orderNumber: false,
+  date: false
+})
+
+const fieldErrors = computed(() => {
+  const phone = customerData.value.phone.trim()
+  return {
+    fullName: customerData.value.fullName.trim() ? '' : 'Full name is required',
+    address: customerData.value.address.trim() ? '' : 'Address is required',
+    phone: !phone
+      ? 'Telephone is required'
+      : /^\d{9,10}$/.test(phone)
+        ? ''
+        : 'Enter 9-10 digits',
+    orderNumber: customerData.value.orderNumber.trim() ? '' : 'Order number is required',
+    date: customerData.value.date ? '' : 'Date is required'
+  }
+})
+
+const isFormValid = computed(() =>
+  Boolean(customerData.value.customerId) &&
+  Object.values(fieldErrors.value).every((msg) => !msg)
+)
+
+const markTouched = (field: keyof typeof touched.value) => {
+  touched.value[field] = true
+}
 
 // ฟังก์ชันสร้างรหัสลูกค้าแบบอัตโนมัติ
 const generateCustomerId = (): string => {
@@ -42,6 +73,11 @@ onMounted(() => {
 })
 
 const handleSubmit = async () => {
+  Object.keys(touched.value).forEach((key) => {
+    touched.value[key as keyof typeof touched.value] = true
+  })
+  if (!isFormValid.value) return
+
   try {
     isSubmitting.value = true
     submitStatus.value = 'Saving data...'
@@ -56,11 +92,8 @@ const handleSubmit = async () => {
     };
 
     // Send actual request
-    const response = await fetch(`${config.API_URL}/customers`, {
+    const response = await apiFetch('/customers', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(requestBody)
     });
 
@@ -117,18 +150,28 @@ const handleSubmit = async () => {
               <input 
                 type="text" 
                 id="fullName" 
-                v-model="customerData.fullName" 
+                v-model="customerData.fullName"
+                :class="{ invalid: touched.fullName && fieldErrors.fullName }"
                 required
+                @blur="markTouched('fullName')"
               >
+              <p v-if="touched.fullName && fieldErrors.fullName" class="field-error">
+                {{ fieldErrors.fullName }}
+              </p>
             </div>
 
             <div class="form-group">
               <label for="address">Address</label>
               <textarea 
                 id="address" 
-                v-model="customerData.address" 
+                v-model="customerData.address"
+                :class="{ invalid: touched.address && fieldErrors.address }"
                 required
+                @blur="markTouched('address')"
               ></textarea>
+              <p v-if="touched.address && fieldErrors.address" class="field-error">
+                {{ fieldErrors.address }}
+              </p>
             </div>
 
             <div class="form-group">
@@ -136,9 +179,14 @@ const handleSubmit = async () => {
               <input 
                 type="tel" 
                 id="phone" 
-                v-model="customerData.phone" 
+                v-model="customerData.phone"
+                :class="{ invalid: touched.phone && fieldErrors.phone }"
                 required
+                @blur="markTouched('phone')"
               >
+              <p v-if="touched.phone && fieldErrors.phone" class="field-error">
+                {{ fieldErrors.phone }}
+              </p>
             </div>
 
             <div class="form-group">
@@ -146,9 +194,14 @@ const handleSubmit = async () => {
               <input 
                 type="text" 
                 id="orderNumber" 
-                v-model="customerData.orderNumber" 
+                v-model="customerData.orderNumber"
+                :class="{ invalid: touched.orderNumber && fieldErrors.orderNumber }"
                 required
+                @blur="markTouched('orderNumber')"
               >
+              <p v-if="touched.orderNumber && fieldErrors.orderNumber" class="field-error">
+                {{ fieldErrors.orderNumber }}
+              </p>
             </div>
 
             <div class="form-group">
@@ -156,13 +209,19 @@ const handleSubmit = async () => {
               <input 
                 type="date" 
                 id="date" 
-                v-model="customerData.date" 
+                v-model="customerData.date"
+                :class="{ invalid: touched.date && fieldErrors.date }"
                 required
+                @blur="markTouched('date')"
               >
+              <p v-if="touched.date && fieldErrors.date" class="field-error">
+                {{ fieldErrors.date }}
+              </p>
             </div>
 
             <div class="submit-container">
               <SubmitButton 
+                :disabled="!isFormValid"
                 :onSubmit="handleSubmit"
                 redirectTo="/customers"
               />
@@ -177,10 +236,10 @@ const handleSubmit = async () => {
 
 <style scoped>
 .customer-form {
-  padding: 40px;
+  padding: 28px 32px;
   background: white;
-  border-radius: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
   overflow: auto;
 }
 
@@ -194,22 +253,46 @@ const handleSubmit = async () => {
 }
 
 h1 {
-  margin: 2rem 0 4rem;
+  margin: 0 0 1.75rem;
   text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E2D40;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E2D40;
 }
 
 input, textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 10px 12px;
+  border: 1px solid #e4e8ee;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 0.9rem;
+  background: #f7f9fc;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #4382D0;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(67, 130, 208, 0.12);
+}
+
+input.invalid, textarea.invalid {
+  border-color: #dc3545;
+  background: #fff8f8;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: #c62828;
 }
 
 .readonly-input {

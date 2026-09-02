@@ -69,11 +69,13 @@ const handleSubmit = async () => {
 .submit-button {
   background-color: #4382D0;
   color: white;
-  padding: 10px 20px;
+  padding: 10px 22px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   width: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .submit-button:hover:not(:disabled) {

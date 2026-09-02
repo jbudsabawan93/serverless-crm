@@ -1,156 +1,127 @@
-## Lambda v2 API (MongoDB + AWS API Gateway)
+# Lambda API
 
-This document describes how to deploy and use the Lambda v2 function that exposes a simple CRUD API for customers, orders, and products backed by MongoDB (via `mongoose`).
+CRUD for `customers`, `orders`, and `products`.  
+Handler file: `index.js` → set AWS handler to **`index.handler`**
 
-### Features
-- Generic REST-style routing under `/api`
-- CRUD for `customers`, `orders`, `products`
-- JSON responses with proper CORS headers
-- Reuses a single MongoDB connection across invocations
+Connects to MongoDB Atlas (Mongoose) and reuses the connection across invocations.  
+No API auth — only the SPA is gated.
 
-### Runtime & Handler
-- Runtime: Node.js 2x.x+
-- Handler: `lambda-v2.handler`
+API Gateway setup: [aws-serverless-apigateway-http.md](./aws-serverless-apigateway-http.md)
 
-If you zip the code manually, ensure the zip contains the handler file at the root of the archive (not inside a folder).
+---
 
-### Environment Variables
-- `MONGODB_URI` (required): MongoDB connection string
-  - Example: `mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>`
-- `SPA_ORIGIN` (recommended): Frontend origin allowed by CORS
-  - Example: `https://your-frontend.example.com`
-  - For testing, you can set `*` (wildcard), but use a specific origin in production.
+## Runtime
 
-### Data Models (MongoDB)
-The following fields are expected (based on v1 schemas and maintained in v2):
+| Setting | Recommended |
+| --- | --- |
+| Runtime | Node.js 18.x or 20.x |
+| Handler | `index.handler` |
+| Timeout | 30 seconds |
+| Memory | 256 MB or more |
 
-- customers
-  - `customer_id` (String, required)
-  - `full_name` (String)
-  - `address` (String)
-  - `telephone` (String)
-  - `order_number` (String)
-  - `date` (Date)
+Do not use `lambda-v2.handler` — that file is not in the zip.
 
-- orders
-  - `order_id` (String, required)
-  - `order_number` (String, required)
-  - `product_name` (String)
-  - `price` (Number)
-  - `amount` (Number)
-  - `total` (Number)
-  - `order_date` (Date)
+---
 
-- products
-  - `product_id` (String, required)
-  - `imge_url` (String)
-  - `product_name` (String, required)
-  - `description` (String)
-  - `price` (Number)
-  - `quantity` (Number)
-  - `category` (String)
-  - `sku` (String)
-  - `createdAt` (Date, default now)
+## Environment
 
-### API Gateway Routing (HTTP API)
-Create two routes and integrate them with your Lambda function:
-- `ANY /api`
-- `ANY /api/{proxy+}`
+| Variable | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `MONGODB_URI` | Yes | — | e.g. `mongodb+srv://USER:PASS@CLUSTER/myCRMs` |
+| `SPA_ORIGIN` | Recommended | `*` | Frontend origin, e.g. `https://your-app.vercel.app` |
+| `RATE_PER_MINUTE` | No | `30` | Per-IP per-minute limit (`0` disables) |
+| `MONTHLY_LIMIT` | No | `100000` | Monthly quota (`0` disables) |
 
-Enable CORS for your API:
-- Allow origins: set to your `SPA_ORIGIN` (or `*` during testing)
-- Allow headers: `content-type,x-amz-date,authorization,x-api-key,x-amz-security-token`
-- Allow methods: `*` (or `GET,POST,PUT,DELETE,OPTIONS`)
+---
 
-### Endpoints
-Base URL example: `https://<api-id>.execute-api.<region>.amazonaws.com/api`
+## Models
 
-- Health check
-  - `GET /api`
+### customers — POST requires `customer_id`, `full_name`
 
-- Customers
-  - `GET /api/customers` — list
-  - `POST /api/customers` — create
-  - `PUT /api/customers` — update by `customer_id`
-  - `DELETE /api/customers` — delete by `customer_id`
-  - Optionally supported in v2: `GET /api/customers/{customer_id}` (if route-style id is enabled)
+`customer_id` `full_name` `address` `telephone` `order_number` `date`
 
-- Orders
-  - `GET /api/orders` — list
-  - `POST /api/orders` — create
-  - `PUT /api/orders` — update by `order_id`
-  - `DELETE /api/orders` — delete by `order_id`
+### orders — POST requires `order_id`, `order_number`
 
-- Products
-  - `GET /api/products` — list
-  - `POST /api/products` — create
-  - `PUT /api/products` — update by `product_id`
-  - `DELETE /api/products` — delete by `product_id`
+`order_id` `order_number` `product_name` `price` `amount` `total` `order_date`
 
-### Request Examples (curl)
-Replace `<BASE_URL>` with your API base, e.g. `https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/api`.
+### products — POST requires `product_id`, `product_name`
+
+`product_id` `imge_url` (spelling matches the schema) `product_name` `description` `price` `quantity` `category` `sku` `createdAt`
+
+---
+
+## Endpoints
+
+Base: `https://<api-id>.execute-api.<region>.amazonaws.com/api`  
+Do not add a trailing slash to `VITE_API_URL`.
+
+| Method | Path | Action |
+| --- | --- | --- |
+| GET | `/` or `/health` | `{ status: "ok", resources: [...] }` |
+| GET | `/wake` | Ping MongoDB |
+| OPTIONS | any | CORS preflight `204` |
+| GET | `/{resource}` | List |
+| GET | `/{resource}/{id}` | Get one |
+| POST | `/{resource}` | Create → `201` `{ status: "success", item }` |
+| PUT / PATCH | `/{resource}` or `/{resource}/{id}` | Update; id in path or body |
+| DELETE | `/{resource}` or `/{resource}/{id}` | Delete; id in path or body |
+
+`{resource}` = `customers` \| `orders` \| `products`  
+Id fields: `customer_id` / `order_id` / `product_id`
+
+Common errors
+
+| HTTP | Meaning |
+| --- | --- |
+| 400 | Missing required fields |
+| 404 | Unknown resource or id not found |
+| 409 | Duplicate id |
+| 429 | Rate limited (`Retry-After`) |
+| 500 | e.g. `MONGODB_URI not set` |
+
+---
+
+## curl
+
+Replace `<BASE>` with the live URL (no trailing slash).
 
 ```bash
-# Health
-curl -s <BASE_URL>
+curl -s <BASE>
+curl -s <BASE>/customers
+curl -s <BASE>/customers/C001
 
-# Customers: list
-curl -s <BASE_URL>/customers
-
-# Customers: create
-curl -s -X POST <BASE_URL>/customers \
+curl -s -X POST <BASE>/customers \
   -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "C001",
-    "full_name": "John Doe",
-    "address": "123 Main St"
-  }'
+  -d '{"customer_id":"C001","full_name":"John Doe","address":"123 Main St"}'
 
-# Customers: update (by customer_id)
-curl -s -X PUT <BASE_URL>/customers \
+curl -s -X PUT <BASE>/customers \
   -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "C001",
-    "telephone": "080-000-0000"
-  }'
+  -d '{"customer_id":"C001","telephone":"0800000000"}'
 
-# Customers: delete (by customer_id)
-curl -s -X DELETE <BASE_URL>/customers \
-  -H "Content-Type: application/json" \
-  -d '{"customer_id": "C001"}'
+curl -s -X DELETE <BASE>/customers/C001
 ```
 
-Analogous requests apply for `/orders` and `/products` using their respective ids and fields.
+Orders and products use the same pattern.
 
-### Deploy (ZIP)
+---
 
-1) Install dependencies in the `api` folder:
+## Pack the ZIP
+
 ```bash
 cd api
 npm install
-```
-
-2) Create a deployment ZIP (Windows PowerShell example):
-```powershell
-Compress-Archive -Path * -DestinationPath lambda-v2.zip -Force
-```
-
-Or using the provided npm script if available:
-```bash
 npm run build
 ```
 
-3) Upload `lambda-v2.zip` to AWS Lambda and set:
-- Runtime: Node.js 18.x/20.x
-- Handler: `lambda-v2.handler`
-- Timeout: 30 seconds (adjust as needed)
-- Memory: 256 MB or higher depending on workload
-- Environment variables: `MONGODB_URI`, `SPA_ORIGIN`
+Produces `lambda-v2.zip` with only `index.js`, `package.json`, and `node_modules`.  
+Upload that zip to Lambda and set the handler to `index.handler`.
 
-4) Connect to API Gateway (HTTP API) with routes as above and enable CORS.
+Do not zip the whole folder with `Compress-Archive *` — it will include markdown and old zips.
 
-### Testing in AWS Console
-Use a test event shaped like HTTP API payloads, e.g.:
+---
+
+## Test in the Lambda console
+
 ```json
 {
   "version": "2.0",
@@ -159,14 +130,12 @@ Use a test event shaped like HTTP API payloads, e.g.:
 }
 ```
 
-### Troubleshooting
-- 502/500 errors: Check CloudWatch logs for connection or validation errors
-- Response blocked in browser: ensure `SPA_ORIGIN` and CORS settings match your frontend origin
-- Timeouts: increase Lambda timeout and ensure MongoDB is reachable from your Lambda environment
-- Empty or null responses: verify API routes (`/api` and `/api/{proxy+}`) are configured and the handler name is correct
+---
 
-### Notes
-- Keep your MongoDB connection outside the handler to reuse across invocations
-- Avoid bundling large dev files in the ZIP; only include runtime code and `node_modules`
+## Troubleshooting
 
-
+- **502 / 500** — CloudWatch: bad URI, or Atlas does not allow the Lambda IP (use `0.0.0.0/0` or a VPC)
+- **Browser blocks CORS** — `SPA_ORIGIN` must match the site origin, and API Gateway CORS must be enabled
+- **Timeout** — raise the timeout; cold start + MongoDB is slow on the first call
+- **Everything 404** — missing `ANY /api` or `ANY /api/{proxy+}`
+- **Handler does nothing** — must be `index.handler`, not `lambda-v2.handler`

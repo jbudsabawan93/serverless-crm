@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { config } from '../config'
+import { apiFetch } from '../api'
 
 interface Props {
   title: string
@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 const handlePrint = async () => {
   try {
     // Fetch customer data
-    const response = await fetch(`${config.API_URL}/customers`)
+    const response = await apiFetch('/customers')
     const customers = await response.json()
     
     if (!response.ok) {
@@ -68,16 +68,17 @@ const handlePrint = async () => {
 <style scoped>
 .action-button {
   background: none;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 6px 12px;
+  border: none;
   cursor: pointer;
+  padding: 4px 6px;
   font-size: 1rem;
-  transition: background 0.3s;
+  opacity: 0.7;
+  transition: opacity 0.2s;
 }
 
 .action-button:hover {
-  background: #f0f0f0;
+  background: none;
+  opacity: 1;
 }
 
 .action-button.print {

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import DashboardLayout from '../DashboardLayout.vue'
 import SubmitButton from '../SubmitButton.vue'
-import { config } from '../../config'
+import { apiFetch } from '../../api'
 import { RouterLink } from 'vue-router'
 
 interface OrderItem {
@@ -60,11 +60,8 @@ const removeItem = (index: number) => {
 const handleSubmit = async () => {
   try {
     for (const item of orderItems.value) {
-      const response = await fetch(`${config.API_URL}/orders`, {
+      const response = await apiFetch('/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           order_id: item.orderId,
           order_number: item.orderNumber,
@@ -235,10 +232,10 @@ const handleSubmit = async () => {
 
 <style scoped>
 .order-form {
-  padding: 40px;
+  padding: 28px 32px;
   background: white;
-  border-radius: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
   overflow: auto;
 }
 
@@ -253,22 +250,28 @@ const handleSubmit = async () => {
 }
 
 h1 {
-  margin: 2rem 0 4rem;
+  margin: 0 0 1.75rem;
   text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E2D40;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E2D40;
 }
 
 input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 10px 12px;
+  border: 1px solid #e4e8ee;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 0.9rem;
+  background: #f7f9fc;
 }
 
 input[readonly] {
@@ -284,11 +287,16 @@ table {
 th, td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e8edf3;
+  font-size: 0.9rem;
 }
 
 th {
-  font-weight: bold;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7785;
 }
 
 .remove-button {
@@ -317,11 +325,13 @@ th {
 .add-button {
   background-color: #4382D0;
   color: white;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   width: auto;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .add-button:hover {

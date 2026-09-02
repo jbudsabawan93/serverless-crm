@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { logout } from '../auth'
 
 import dashboardIcon from '../assets/dashboard.svg';
 import customersIcon from '../assets/customers.svg';
@@ -9,6 +10,12 @@ import productsIcon from '../assets/products.svg';
 
 const isSidebarOpen = ref(true)
 const route = useRoute()
+const router = useRouter()
+
+const handleLogout = () => {
+  logout()
+  router.push({ name: 'login' })
+}
 
 const menuItems = [
   {
@@ -39,7 +46,10 @@ const menuItems = [
     <!-- Sidebar -->
     <aside class="sidebar" :class="{ 'sidebar-closed': !isSidebarOpen }">
       <div class="sidebar-header">
-        <h2><img src="../assets/logo2.png" alt="logo" class="logo">VUE CRM</h2>
+        <h2>
+          <img src="../assets/logo.png" alt="CRM managment" class="logo">
+          <span class="brand-text">CRM managment</span>
+        </h2>
       </div>
       
       <nav class="sidebar-nav">
@@ -55,6 +65,13 @@ const menuItems = [
           
         </div>
       </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" class="logout-btn" @click="handleLogout">
+          <i class="fas fa-sign-out-alt"></i>
+          <span class="nav-title">Logout</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -70,7 +87,8 @@ const menuItems = [
 <style scoped>
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -78,6 +96,8 @@ const menuItems = [
   background-color: #1E2D40;
   color: #ffffff;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-closed {
@@ -93,15 +113,28 @@ const menuItems = [
 
 .sidebar-header h2 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .sidebar-header .logo {
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  white-space: normal;
+}
+
+.sidebar-closed .brand-text {
+  display: none;
 }
 
 .toggle-btn {
@@ -114,8 +147,35 @@ const menuItems = [
 }
 
 .sidebar-nav {
-  padding: 20px 0;
-  font-size: 1.2rem;
+  padding: 12px 0;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.sidebar-footer {
+  padding: 16px 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: transparent;
 }
 
 .nav-item-container {
@@ -124,17 +184,18 @@ const menuItems = [
 
 .nav-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  padding: 20px;
-  color: #ffffff;
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.86);
   text-decoration: none;
+  font-weight: 500;
   transition: background-color 0.3s;
 }
 
 .menu-icon {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
 }
 
 .nav-item:hover {
@@ -161,8 +222,13 @@ const menuItems = [
 
 .main-content {
   flex: 1;
-  background-color: #f5f5f5;
+  min-width: 0;
+  min-height: 0;
+  background-color: #f3f5f8;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
 }
 
 .content-expanded {
@@ -182,7 +248,11 @@ const menuItems = [
 }
 
 .content {
-  padding: 20px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .submenu {

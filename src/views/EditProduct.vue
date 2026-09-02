@@ -2,7 +2,7 @@
 import DashboardLayout from '../components/DashboardLayout.vue'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { config } from '../config'
+import { apiFetch } from '../api'
 import SubmitButton from '../components/SubmitButton.vue'
 
 interface Product {
@@ -49,7 +49,7 @@ const fetchProduct = async () => {
     isLoading.value = true
     error.value = null
 
-    const response = await fetch(`${config.API_URL}/products`)
+    const response = await apiFetch('/products')
     const products = await response.json()
 
     if (response.ok) {
@@ -127,11 +127,8 @@ const handleSubmit = async () => {
       createdAt: product.value.createdAt || new Date().toISOString()
     };
 
-    const response = await fetch(`${config.API_URL}/products`, {
+    const response = await apiFetch('/products', {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(requestBody),
     });
 
@@ -303,34 +300,37 @@ onMounted(() => {
 
 <style scoped>
 .edit-product-page {
-  padding: 20px;
+  padding: 4px 0 8px;
 }
 
 .back-button-container {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .back-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background-color: #f8f9fa;
-  color: #333;
+  padding: 0;
+  background: none;
+  color: #6b7785;
   text-decoration: none;
-  border-radius: 4px;
-  font-weight: 500;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .back-button:hover {
-  background-color: #e9ecef;
+  background: none;
+  color: #1E2D40;
 }
 
 .product-form {
-  padding: 40px;
+  padding: 28px 32px;
   background: white;
-  border-radius: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
   overflow: auto;
 }
 .form-container {
@@ -359,25 +359,30 @@ onMounted(() => {
 }
 
 h1 {
-  margin: 2rem 0 4rem;
+  margin: 0 0 1.75rem;
   text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E2D40;
 }
 
 label {
   display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E2D40;
 }
 
 input,
 select,
 textarea {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid #e4e8ee;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  background: #f7f9fc;
 }
 
 input:disabled,
@@ -404,7 +409,7 @@ textarea:focus {
   width: 100%;
   min-height: 150px;
   border: 2px dashed #ddd;
-  border-radius: 4px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;

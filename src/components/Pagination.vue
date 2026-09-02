@@ -81,25 +81,28 @@ const changePage = (page: number) => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 5px;
-  margin-top: 20px;
-  padding: 10px;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 15px;
+  flex-shrink: 0;
+  border-top: 1px solid #e0e0e0;
 }
 
 .page-button {
-  min-width: 32px;
-  height: 32px;
+  min-width: 34px;
+  height: 34px;
   padding: 0;
   border: none;
-  background-color: #f0f0f0;
-  color: #666;
-  border-radius: 4px;
+  background-color: #f3f5f8;
+  color: #6b7785;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .page-button:hover:not(:disabled):not(.active) {

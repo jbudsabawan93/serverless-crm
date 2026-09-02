@@ -6,7 +6,7 @@ import Pagination from '../components/Pagination.vue'
 import DateFormatter from '../components/DateFormatter.vue'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { config } from '../config'
+import { apiFetch } from '../api'
 
 interface Order {
   orderId: string
@@ -24,7 +24,7 @@ const error = ref<string | null>(null)
 
 // Pagination
 const currentPage = ref(1)
-const itemsPerPage = 5
+const itemsPerPage = 15
 const totalPages = computed(() => {
   return Math.ceil(orders.value.length / itemsPerPage)
 })
@@ -39,7 +39,7 @@ const fetchOrders = async () => {
     isLoading.value = true
     error.value = null
 
-    const response = await fetch(`${config.API_URL}/orders`)
+    const response = await apiFetch('/orders')
     if (!response.ok) throw new Error('Network response was not ok')
     const data = await response.json()
 
@@ -62,11 +62,8 @@ const fetchOrders = async () => {
 
 // ฟังก์ชันสำหรับลบข้อมูลออเดอร์ผ่าน API
 const deleteOrder = async (orderId: string) => {
-  const response = await fetch(`${config.API_URL}/orders`, {
+  const response = await apiFetch('/orders', {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json'
-    },
     body: JSON.stringify({ order_id: orderId })
   })
   if (!response.ok) {
@@ -108,7 +105,8 @@ onMounted(() => {
       </div>
 
       <div v-else class="orders-table">
-        <table>
+        <div class="table-scroll">
+          <table>
           <thead>
             <tr>
               <th>Order ID</th>
@@ -155,7 +153,8 @@ onMounted(() => {
               </td>
             </tr>
           </tbody>
-        </table>
+          </table>
+        </div>
 
         <Pagination
           v-model:currentPage="currentPage"
@@ -168,23 +167,36 @@ onMounted(() => {
 
 <style scoped>
 .orders-page {
-  padding: 20px;
+  padding: 4px 0 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-header {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E2D40;
 }
 
 .add-button {
   background-color: #4382D0;
   color: white;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 10px;
   text-decoration: none;
-  font-weight: bold;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .add-button:hover {
@@ -195,8 +207,10 @@ onMounted(() => {
   text-align: center;
   padding: 40px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
+  font-size: 0.95rem;
+  color: #6b7785;
 }
 
 .error-message {
@@ -210,8 +224,9 @@ onMounted(() => {
   background-color: #4382D0;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .retry-button:hover {
@@ -219,10 +234,19 @@ onMounted(() => {
 }
 
 .orders-table {
-  padding: 40px;
+  flex: 1;
+  min-height: 0;
   background: white;
-  border-radius: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 45, 64, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-scroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -233,23 +257,33 @@ table {
 }
 
 th, td {
-  padding: 12px 15px;
+  padding: 12px 14px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e8edf3;
+  font-size: 0.9rem;
 }
 
 th {
-  font-weight: bold;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7785;
+  background: #f7f9fc;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 td {
   white-space: normal;
   word-break: break-word;
+  color: #1E2D40;
 }
 
 tr:hover {
-  background-color: #f9f9f9;
+  background-color: #f7f9fc;
 }
 
 thead tr:hover {
@@ -257,8 +291,8 @@ thead tr:hover {
 }
 
 .no-data {
-  color: #666;
-  font-size: 1.1rem;
+  color: #6b7785;
+  font-size: 0.95rem;
 }
 
 .actions {
@@ -271,7 +305,7 @@ thead tr:hover {
   border: none;
   cursor: pointer;
   padding: 0 10px;
-  font-size: 1.2rem;
+  font-size: 1rem;
   opacity: 0.7;
   transition: opacity 0.2s;
 }
