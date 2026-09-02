@@ -3,7 +3,7 @@
 A CRM for **products, customers, and orders**.  
 Vue 3 frontend on Vercel. API on AWS Lambda + MongoDB Atlas.
 
-**Live demo:** _paste URL here_  
+**Live demo:** [_paste URL here_](https://serverless-crm-one.vercel.app/)  
 **Login:** `admin@mail.com` / `1234`
 
 ## Preview
