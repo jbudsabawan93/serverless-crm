@@ -1,3 +1,5 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/((?!invoice-preview\\.html).*)", "destination": "/index.html" }
+  ]
 }

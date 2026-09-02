@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Swal from 'sweetalert2'
+import trashIcon from '../assets/trash.svg'
 
 interface Props {
   itemId: string
@@ -56,7 +57,7 @@ const handleDelete = async () => {
     class="action-button delete"
     :title="`Delete${itemType}`"
   >
-    <img src="/src/assets/trash.svg" alt="Delete">
+    <img :src="trashIcon" alt="Delete">
   </button>
 </template>
 

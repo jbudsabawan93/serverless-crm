@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { apiFetch } from '../api'
+import printerIcon from '../assets/printer.svg'
 
 interface Props {
   title: string
@@ -38,15 +39,12 @@ const handlePrint = async () => {
       customerPhone: customer?.telephone || 'N/A'
     }
 
-    // Open preview window
-    const printWindow = window.open('/src/components/html/invoice-preview.html', '_blank')
+    const printWindow = window.open('/invoice-preview.html', '_blank')
     if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.postMessage({
-          type: 'renderInvoice',
-          invoiceData: plainData
-        }, '*')
-      }
+      const payload = { type: 'renderInvoice', invoiceData: plainData }
+      const send = () => printWindow.postMessage(payload, window.location.origin)
+      printWindow.onload = send
+      setTimeout(send, 300)
     }
   } catch (error) {
     // Show error message to user
@@ -61,7 +59,7 @@ const handlePrint = async () => {
     class="action-button print"
     title="Print"
   >
-    <img src="/src/assets/printer.svg" alt="Print">
+    <img :src="printerIcon" alt="Print">
   </button>
 </template>
 

@@ -6,6 +6,7 @@ import DeleteButton from '../components/DeleteButton.vue'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { apiFetch } from '../api'
+import editIcon from '../assets/edit.svg'
 
 interface Customer {
   customerId: string
@@ -135,7 +136,7 @@ onMounted(() => {
                   class="action-button edit"
                   title="Edit"
                 >
-                  <img src="/src/assets/edit.svg" alt="Edit">
+                  <img :src="editIcon" alt="Edit">
                 </RouterLink>
                 <DeleteButton
                   :itemId="customer.customerId"

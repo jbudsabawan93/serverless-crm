@@ -7,6 +7,7 @@ import DateFormatter from '../components/DateFormatter.vue'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { apiFetch } from '../api'
+import editIcon from '../assets/edit.svg'
 
 interface Order {
   orderId: string
@@ -136,7 +137,7 @@ onMounted(() => {
                   class="action-button edit"
                   title="Edit"
                 >
-                  <img src="/src/assets/edit.svg" alt="Edit">
+                  <img :src="editIcon" alt="Edit">
                 </RouterLink>
                 
                 <PrintButton
